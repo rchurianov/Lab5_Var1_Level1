@@ -1,13 +1,17 @@
 ﻿using System;
+using System.IO;
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Lab5_Var1_Level1
 {
+    [Serializable]
     public class Student : Person, IDateAndCopy, IEnumerable, INotifyPropertyChanged
     {
         private Education degree;
@@ -324,6 +328,25 @@ namespace Lab5_Var1_Level1
                    AGP.ToString();
         }
 
+        /*
+         * Makes a copy of the calling object with MemoryStream as a mediator.
+         * First, calling object is serialized to a MemoryStream.
+         * Then deserialized from it.
+         * */
+        public Student DeepCopyThroughSerialize()
+        {
+            MemoryStream m_stream = new MemoryStream();
+            IFormatter formatter = new BinaryFormatter();
+            formatter.Serialize(m_stream, this);
+
+            Student copy_student = new Student();
+            // set MemoryStream pointer to beginning (0)
+            m_stream.Seek(0, SeekOrigin.Begin);
+            copy_student = (Student) formatter.Deserialize(m_stream);
+            m_stream.Close();
+            return copy_student;
+        }
+
         protected override object DeepCopy()
         {
             Student student_copy = new Student();
@@ -617,6 +640,108 @@ namespace Lab5_Var1_Level1
             this.exam_list.Sort(edc);
         }
 
-        
+        public bool Save(string file_name)
+        {
+            try
+            {
+                FileStream f_stream = new FileStream(file_name, FileMode.Create, FileAccess.Write, FileShare.None);
+                BinaryFormatter formatter = new BinaryFormatter();
+                formatter.Serialize(f_stream, this);
+                f_stream.Close();
+            }
+            catch (Exception e)
+            {
+                return false;
+            }
+            return true;
+        }
+
+        public bool Load(string file_name)
+        {
+            FileStream f_stream = new FileStream(file_name, FileMode.Open, FileAccess.Read, FileShare.Read);
+            BinaryFormatter formatter = new BinaryFormatter();
+            Student st = (Student) formatter.Deserialize(f_stream);
+
+            this.Passport_Data = st.Passport_Data;
+            this.Degree = st.Degree;
+            this.Group_Number = st.Group_Number;
+            this.Exam_List = st.Exam_List;
+            this.Credit_List = st.Credit_List;
+            
+            f_stream.Close();
+            return true;
+        }
+
+        public bool AddFromConsole()
+        {
+            Console.WriteLine("Input data for a new Exam");
+            Console.WriteLine("Exam name, Exam Date (day/month/year, Grade");
+            Console.WriteLine("Delimiters: ;, \"space\", -");
+
+            char[] delimiters = { ';', ' ', '-' };
+
+            string input = Console.ReadLine();
+
+            string[] string_data = input.Split(delimiters);
+
+            Exam exam = new Exam();
+            exam.Exam_Name = string_data[0];
+            try
+            {
+                DateTime d_t = Convert.ToDateTime(string_data[1]);
+                exam.Exam_Date = d_t;
+            }
+            catch (Exception e)
+            {
+                //do nothing for now
+                //throw;
+            }
+            int input_grade = 0;
+            try
+            {
+                int.TryParse(string_data[2], out input_grade);
+                exam.Grade = input_grade;
+            }
+            catch (Exception e)
+            {
+                // do nothing for now
+            }
+            this.AddExams(exam);
+            return true;
+        }
+
+        public static bool Save(string file_name, Student obj)
+        {
+            try
+            {
+                FileStream f_stream = new FileStream(file_name, FileMode.Create, FileAccess.Write, FileShare.None);
+                BinaryFormatter formatter = new BinaryFormatter();
+                formatter.Serialize(f_stream, obj);
+                f_stream.Close();
+            }
+            catch (Exception e)
+            {
+                return false;
+            }
+            return true;
+        }
+
+        // TODO: if output object initialization did not succeded,
+        // Load mehod should keep the old values unchanged.
+        public static bool Load(string file_name, out Student obj)
+        {
+            FileStream f_stream = new FileStream(file_name, FileMode.Open, FileAccess.Read, FileShare.Read);
+            BinaryFormatter formatter = new BinaryFormatter();
+            obj = (Student) formatter.Deserialize(f_stream);
+
+            //this.Passport_Data = st.Passport_Data;
+            //this.Degree = st.Degree;
+            //this.Group_Number = st.Group_Number;
+            //this.Exam_List = st.Exam_List;
+            //this.Credit_List = st.Credit_List;
+
+            f_stream.Close();
+            return true;
+        }
     }
 }
